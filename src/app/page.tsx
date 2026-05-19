@@ -23,11 +23,9 @@ export default function Home() {
             <span className="italic text-muted-foreground">Wow.</span>
           </h1>
           <p className="mt-6 mx-auto max-w-2xl text-center text-base sm:text-lg text-muted-foreground leading-relaxed">
-            마케팅의 시작부터 끝까지, 와우포인트가 함께합니다.
-            <br className="hidden sm:block" />
-            먼저, 내 가게 주변 상권을{" "}
-            <strong className="text-foreground">1분</strong> 안에
-            데이터로 확인하세요.
+            상호·업종·주소만 입력하면{" "}
+            <strong className="text-foreground">상권 데이터 + 타겟 + 후킹 멘트 + 네이버 키워드 5개 + 플랫폼 추천</strong>
+            까지 한 번에. 무료로.
           </p>
           <div className="mt-10 flex items-center justify-center gap-3">
             <Link href="/analyze">
@@ -42,8 +40,8 @@ export default function Home() {
             </a>
           </div>
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            ✓ 공공 데이터 + AI 분석   ·   ✓ 분석 비용 무료
-            ·   ✓ 1분 안에 리포트 도착
+            ✓ 공공 데이터 + AI 분석   ·   ✓ 네이버 SEO 키워드 5종
+            ·   ✓ 플랫폼별 우선순위
           </p>
         </section>
 
@@ -83,9 +81,10 @@ export default function Home() {
                 <div className="text-3xl font-semibold tracking-tight text-muted-foreground">
                   03
                 </div>
-                <CardTitle className="mt-4">AI 인사이트 + 제안</CardTitle>
+                <CardTitle className="mt-4">키워드·플랫폼·액션</CardTitle>
                 <CardDescription>
-                  데이터를 바탕으로 마케팅·메뉴·운영 액션 3가지를 제안합니다.
+                  네이버 SEO 키워드 5개, 적합 플랫폼 3~5종, 다음 액션
+                  3가지를 한 번에 제안합니다.
                 </CardDescription>
               </Card>
             </div>

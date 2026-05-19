@@ -64,49 +64,181 @@ export default async function ReportPage({
           ) : null}
         </header>
 
-        {/* AI 인사이트 */}
-        <section className="mt-10">
+        {/* AI 인사이트 + 타겟 + 후킹 */}
+        <section className="mt-10 space-y-4">
           <Card className="bg-muted">
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-              AI 인사이트
+              ✱ WOW POINT · 한 줄 진단
             </div>
             <p className="mt-3 text-base leading-relaxed whitespace-pre-line">
               {row.ai_insight ?? "인사이트 생성 결과가 없습니다."}
             </p>
-            {Array.isArray(row.ai_actions) && row.ai_actions.length > 0 ? (
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                {row.ai_actions.map(
-                  (a: { title: string; detail: string; impact: string }, i: number) => (
-                    <div
-                      key={i}
-                      className="rounded-lg border border-border bg-background p-4"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          액션 {i + 1}
+          </Card>
+
+          {(row.ai_target || row.ai_hook) && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {row.ai_target && (
+                <Card>
+                  <div className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+                    🎯 추천 타겟
+                  </div>
+                  <p className="mt-3 text-lg font-semibold tracking-tight">
+                    {row.ai_target}
+                  </p>
+                </Card>
+              )}
+              {row.ai_hook && (
+                <Card>
+                  <div className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+                    🪝 후킹 멘트
+                  </div>
+                  <p className="mt-3 text-lg font-semibold tracking-tight leading-snug">
+                    &ldquo;{row.ai_hook}&rdquo;
+                  </p>
+                </Card>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* 네이버 대표 키워드 5가지 */}
+        {Array.isArray(row.ai_keywords) && row.ai_keywords.length > 0 && (
+          <section className="mt-8">
+            <div className="flex items-end justify-between">
+              <h2 className="text-lg font-semibold">
+                🔑 네이버 대표 키워드 5가지
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                네이버 검색은 단어 덩어리를 인식합니다
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {row.ai_keywords.map(
+                (
+                  k: {
+                    keyword: string;
+                    intent: string;
+                    priority: string;
+                  },
+                  i: number,
+                ) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border bg-background p-4 flex items-start gap-3"
+                  >
+                    <div className="text-2xl font-semibold text-muted-foreground tabular-nums">
+                      {String(i + 1).padStart(2, "0")}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-semibold tracking-tight break-keep">
+                        {k.keyword}
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] rounded border border-border px-1.5 py-0.5 text-muted-foreground">
+                          {k.intent}
                         </span>
                         <span
                           className={
-                            "text-[10px] rounded px-1.5 py-0.5 " +
-                            (a.impact === "high"
+                            "text-[11px] rounded px-1.5 py-0.5 " +
+                            (k.priority === "high"
                               ? "bg-foreground text-background"
-                              : "border border-border")
+                              : "border border-border text-muted-foreground")
                           }
                         >
-                          {a.impact}
+                          우선순위 {k.priority}
                         </span>
                       </div>
-                      <div className="mt-2 font-semibold">{a.title}</div>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {a.detail}
-                      </div>
                     </div>
-                  ),
-                )}
-              </div>
-            ) : null}
-          </Card>
-        </section>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* 추천 플랫폼 */}
+        {Array.isArray(row.ai_platforms) && row.ai_platforms.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold">📱 추천 마케팅 플랫폼</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              매장 특성·타겟·지역에 맞춰 우선순위 매김
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {row.ai_platforms.map(
+                (
+                  p: { name: string; score: string; reason: string },
+                  i: number,
+                ) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border bg-background p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold tracking-tight">
+                        {p.name}
+                      </div>
+                      <span
+                        className={
+                          "text-[11px] rounded px-1.5 py-0.5 " +
+                          (p.score === "high"
+                            ? "bg-foreground text-background"
+                            : p.score === "mid"
+                              ? "border border-border"
+                              : "text-muted-foreground")
+                        }
+                      >
+                        {p.score}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                      {p.reason}
+                    </p>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* 실행 액션 3가지 */}
+        {Array.isArray(row.ai_actions) && row.ai_actions.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold">⚡ 다음 액션 3가지</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {row.ai_actions.map(
+                (
+                  a: { title: string; detail: string; impact: string },
+                  i: number,
+                ) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border bg-background p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        액션 {i + 1}
+                      </span>
+                      <span
+                        className={
+                          "text-[10px] rounded px-1.5 py-0.5 " +
+                          (a.impact === "high"
+                            ? "bg-foreground text-background"
+                            : "border border-border")
+                        }
+                      >
+                        {a.impact}
+                      </span>
+                    </div>
+                    <div className="mt-2 font-semibold">{a.title}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {a.detail}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        )}
 
         {/* 주요 지표 */}
         <section className="mt-10">

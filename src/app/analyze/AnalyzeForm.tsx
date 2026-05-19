@@ -56,9 +56,21 @@ export function AnalyzeForm() {
         <Input
           id="industry"
           name="industry"
-          placeholder="예) 카페, 한식, 미용실, 학원"
+          placeholder="예) 한식집, 이자카야, 카페, 미용실"
           required
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="menu">대표 메뉴</Label>
+        <Input
+          id="menu"
+          name="menu"
+          placeholder="예) 김치찌개, 차돌박이, 아메리카노 (쉼표로 구분)"
+        />
+        <p className="text-xs text-muted-foreground">
+          대표 메뉴를 1~3개 적어주시면 네이버 키워드 추천이 훨씬 정교해집니다.
+        </p>
       </div>
 
       <div className="space-y-1.5">

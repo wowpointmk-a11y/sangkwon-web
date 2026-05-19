@@ -14,6 +14,7 @@ const analyzeSchema = z.object({
     .transform((v) => (v ? v.replace(/[^0-9]/g, "") : v))
     .refine((v) => !v || v.length === 10, "사업자번호는 10자리 숫자여야 합니다"),
   industry: z.string().min(1, "업종을 입력해주세요"),
+  menu: z.string().optional(),
   address: z.string().min(2, "주소를 입력해주세요"),
 });
 
@@ -30,6 +31,7 @@ export async function runAnalyze(
     bizName: formData.get("bizName"),
     bizRegNo: formData.get("bizRegNo") || undefined,
     industry: formData.get("industry"),
+    menu: formData.get("menu") || undefined,
     address: formData.get("address"),
   });
   if (!parsed.success) {

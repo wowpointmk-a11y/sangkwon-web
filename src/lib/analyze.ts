@@ -3,7 +3,7 @@
 // 2) 사업자번호 진위확인
 // 3) 반경 내 상가 조회
 // 4) 행정구역 인구 조회
-// 5) OpenAI 인사이트
+// 5) OpenAI 인사이트 + 키워드 + 플랫폼 추천
 // 6) 결과 캐싱 + 반환
 
 import { geocodeAddress, reverseGeocode } from "./api/kakao";
@@ -21,6 +21,7 @@ export interface AnalyzeInput {
   bizName: string;
   bizRegNo?: string;
   industry: string;
+  menu?: string;
   address: string;
   radiusM?: number;
 }
@@ -63,8 +64,8 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
     throw new Error("주소를 좌표로 변환하지 못했습니다. 더 정확한 주소를 입력해주세요.");
   }
 
-  // 캐시 확인
-  const cacheKey = `${geo.lng.toFixed(5)}|${geo.lat.toFixed(5)}|${radiusM}|${input.industry}`;
+  // 캐시는 메뉴까지 키에 포함 (메뉴 다르면 키워드가 달라야 함)
+  const cacheKey = `${geo.lng.toFixed(5)}|${geo.lat.toFixed(5)}|${radiusM}|${input.industry}|${input.menu ?? ""}`;
   const supabase = getServiceClient();
   const { data: cached } = await supabase
     .from("analyses")
@@ -99,7 +100,13 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
   const ai = await generateInsight({
     bizName: input.bizName,
     industry: input.industry,
+    menu: input.menu,
     address: geo.address,
+    region: {
+      sido: geo.region_1depth,
+      sgg: geo.region_2depth,
+      dong: geo.region_3depth,
+    },
     stats: {
       totalStores: storesData.totalCount || storesData.items.length,
       competitorCount,
@@ -116,7 +123,14 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
     },
   }).catch((e) => {
     console.error("OpenAI 인사이트 생성 실패:", e);
-    return { insight: "AI 인사이트 생성에 실패했습니다.", actions: [] };
+    return {
+      insight: "AI 인사이트 생성에 실패했습니다.",
+      target: "",
+      hook: "",
+      keywords: [],
+      platforms: [],
+      actions: [],
+    };
   });
 
   const summary = {
@@ -131,6 +145,7 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
     .insert({
       biz_name: input.bizName,
       industry: input.industry,
+      menu: input.menu,
       address: geo.address,
       lng: geo.lng,
       lat: geo.lat,
@@ -140,6 +155,10 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
       raw_biz_status: bizStatusRaw,
       summary,
       ai_insight: ai.insight,
+      ai_target: ai.target,
+      ai_hook: ai.hook,
+      ai_keywords: ai.keywords,
+      ai_platforms: ai.platforms,
       ai_actions: ai.actions,
       cache_key: cacheKey,
     })
@@ -184,7 +203,11 @@ function hydrateFromCache(row: {
   raw_population: ReturnType<typeof populationByRegion> extends Promise<infer R> ? R : null;
   raw_biz_status: { b_stt_cd: string; b_stt: string } | null;
   ai_insight: string;
-  ai_actions: AiInsight["actions"];
+  ai_target: string | null;
+  ai_hook: string | null;
+  ai_keywords: AiInsight["keywords"] | null;
+  ai_platforms: AiInsight["platforms"] | null;
+  ai_actions: AiInsight["actions"] | null;
 }): AnalyzeResult {
   const pop = row.raw_population;
   return {
@@ -210,6 +233,13 @@ function hydrateFromCache(row: {
           byAge: pop.byAge,
         }
       : null,
-    ai: { insight: row.ai_insight, actions: row.ai_actions ?? [] },
+    ai: {
+      insight: row.ai_insight,
+      target: row.ai_target ?? "",
+      hook: row.ai_hook ?? "",
+      keywords: row.ai_keywords ?? [],
+      platforms: row.ai_platforms ?? [],
+      actions: row.ai_actions ?? [],
+    },
   };
 }
