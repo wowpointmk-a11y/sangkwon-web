@@ -12,7 +12,7 @@ import {
   tallyByIndustry,
   countCompetitors,
 } from "./api/sosang";
-import { populationByRegion } from "./api/population";
+import { populationByRadius, populationByRegion } from "./api/population";
 import { checkBusinessStatus } from "./api/nts";
 import { generateInsight, type AiInsight } from "./api/openai";
 import { getServiceClient } from "./supabase";
@@ -90,9 +90,13 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
     storesRes.status === "fulfilled" ? storesRes.value : { items: [], totalCount: 0 };
   const region = regionRes.status === "fulfilled" ? regionRes.value : null;
 
-  const population = region?.beob?.code
-    ? await populationByRegion({ bcode: region.beob.code }).catch(() => null)
-    : null;
+  // 반경 2km 안에 포함되는 모든 행정동의 인구 합산
+  const population = await populationByRadius({
+    lng: geo.lng,
+    lat: geo.lat,
+    radiusM,
+    reverseGeocode,
+  }).catch(() => null);
 
   const topIndustries = tallyByIndustry(storesData.items).slice(0, 10);
   const competitorCount = countCompetitors(storesData.items, input.industry);

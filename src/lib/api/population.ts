@@ -62,17 +62,13 @@ function defaultYm(): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// 시군구 단위 (lv=2) 성/연령별 인구 조회.
-// bcode: 법정동 10자리 (앞 5자리가 시군구).
+// 단일 행정동(법정동 10자리) 단위 인구 조회 — 내부 helper
 export async function populationByRegion(opts: {
   bcode: string;
   year?: number;
+  lv?: string;
 }): Promise<PopulationSummary | null> {
-  const ym = opts.year
-    ? `${opts.year}01`
-    : defaultYm();
-
-  // 3개월 시도 → 안 되면 1년 전 같은 달 fallback
+  const ym = opts.year ? `${opts.year}01` : defaultYm();
   const candidates: string[] = [ym, fallbackYm(ym), "202501"];
 
   for (const targetYm of candidates) {
@@ -80,11 +76,124 @@ export async function populationByRegion(opts: {
       stdgCd: opts.bcode,
       srchFrYm: targetYm,
       srchToYm: targetYm,
-      lv: "2",
+      lv: opts.lv ?? "3", // 3 = 읍면동 단위 (행정동 통반은 4)
     });
     if (result) return result;
   }
   return null;
+}
+
+// 반경 N미터 안에 들어가는 행정동들의 인구 합산.
+// 8방향 + 중심 = 9개 좌표 샘플링 → 각 좌표의 법정동 코드 unique 추출 → 합산.
+export async function populationByRadius(opts: {
+  lng: number;
+  lat: number;
+  radiusM: number;
+  reverseGeocode: (
+    lng: number,
+    lat: number,
+  ) => Promise<{ beob?: { code?: string; name?: string } | null } | null>;
+}): Promise<PopulationSummary | null> {
+  // 9개 샘플 점. 대각선 고려해서 반경의 0.7배 거리 사용.
+  const r = opts.radiusM * 0.7;
+  const dLatPer100m = 1 / 111000; // 1m → 위도 도(degree)
+  const dLngPer100m = 1 / (111000 * Math.cos((opts.lat * Math.PI) / 180));
+
+  const offsets: Array<[number, number]> = [
+    [0, 0],
+    [0, 1],
+    [1, 1],
+    [1, 0],
+    [1, -1],
+    [0, -1],
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+  ];
+
+  const points = offsets.map(([dx, dy]) => ({
+    lng: opts.lng + dx * r * dLngPer100m,
+    lat: opts.lat + dy * r * dLatPer100m,
+  }));
+
+  // 각 좌표 → 법정동 코드
+  const bcodes = new Set<string>();
+  const regionNames = new Map<string, string>();
+  await Promise.all(
+    points.map(async (p) => {
+      try {
+        const region = await opts.reverseGeocode(p.lng, p.lat);
+        const code = region?.beob?.code;
+        if (code) {
+          bcodes.add(code);
+          if (region?.beob?.name) regionNames.set(code, region.beob.name);
+        }
+      } catch {
+        // 무시
+      }
+    }),
+  );
+
+  if (bcodes.size === 0) return null;
+
+  // 각 동 인구 → 합산
+  const summaries: PopulationSummary[] = [];
+  await Promise.all(
+    Array.from(bcodes).map(async (code) => {
+      const s = await populationByRegion({ bcode: code, lv: "3" }).catch(
+        () => null,
+      );
+      if (s) summaries.push(s);
+    }),
+  );
+
+  if (summaries.length === 0) return null;
+  return mergeSummaries(summaries, Array.from(regionNames.values()));
+}
+
+function mergeSummaries(
+  list: PopulationSummary[],
+  regionNames: string[],
+): PopulationSummary {
+  const buckets: Record<string, { m: number; f: number }> = {};
+  let totalM = 0;
+  let totalF = 0;
+
+  for (const s of list) {
+    for (const b of s.byAge) {
+      buckets[b.ageGroup] = buckets[b.ageGroup] ?? { m: 0, f: 0 };
+      buckets[b.ageGroup].m += b.male;
+      buckets[b.ageGroup].f += b.female;
+      totalM += b.male;
+      totalF += b.female;
+    }
+  }
+
+  const total = totalM + totalF;
+  const byAge: PopulationByAge[] = Object.entries(buckets)
+    .map(([ageGroup, v]) => ({
+      ageGroup,
+      male: v.m,
+      female: v.f,
+      total: v.m + v.f,
+    }))
+    .sort((a, b) => ageOrder(a.ageGroup) - ageOrder(b.ageGroup));
+
+  const dominant = [...byAge].sort((a, b) => b.total - a.total)[0];
+  const region =
+    regionNames.length === 1
+      ? regionNames[0]
+      : `${regionNames.slice(0, 2).join(", ")} 등 ${regionNames.length}개 동`;
+
+  return {
+    regionName: region || "반경 2km 권역",
+    totalPopulation: total,
+    household: null,
+    byAge,
+    malePct: total ? (totalM / total) * 100 : 0,
+    femalePct: total ? (totalF / total) * 100 : 0,
+    dominantAgeGroup: dominant?.ageGroup ?? "-",
+  };
 }
 
 function fallbackYm(ym: string): string {
