@@ -43,6 +43,16 @@ export function SiteFooter() {
                 와우포인트 마케팅 서비스
               </a>
             </li>
+            <li>
+              <Link href="/privacy" className="hover:text-foreground">
+                개인정보 처리방침
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms" className="hover:text-foreground">
+                이용약관
+              </Link>
+            </li>
           </ul>
         </div>
 

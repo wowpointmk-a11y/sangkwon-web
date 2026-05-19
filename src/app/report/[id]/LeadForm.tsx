@@ -105,8 +105,16 @@ export function LeadForm({ defaults }: Props) {
             className="mt-0.5 accent-background"
           />
           <span>
-            [필수] 개인정보 수집·이용에 동의합니다. (수집 항목: 이름, 연락처,
-            이메일 / 보유 기간: 3년)
+            [필수]{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              개인정보 수집·이용
+            </a>
+            에 동의합니다. (수집 항목: 이름, 연락처, 이메일 / 보유 기간: 3년)
           </span>
         </label>
         <label className="flex items-start gap-2 cursor-pointer">
@@ -115,7 +123,18 @@ export function LeadForm({ defaults }: Props) {
             name="consentMarketing"
             className="mt-0.5 accent-background"
           />
-          <span>[선택] 마케팅 정보 수신에 동의합니다.</span>
+          <span>
+            [선택] 마케팅 정보 수신 및{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              이용약관
+            </a>
+            에 동의합니다.
+          </span>
         </label>
       </div>
 

@@ -18,5 +18,9 @@ export const brand = {
     phone: "010-3232-6156",
     email: "wowpointmk@gmail.com",
     site: "https://wowpoint-mk.web.app",
+    // TODO: 실제 사업자번호·대표자명 받으면 채울 것
+    bizRegNo: "(사업자번호 추후 등록)",
+    representative: "(대표자명 추후 등록)",
+    privacyOfficer: "(개인정보 보호책임자 추후 지정)",
   },
 } as const;
