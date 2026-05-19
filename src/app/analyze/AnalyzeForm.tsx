@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { AddressSearch } from "@/components/site/AddressSearch";
 import { BizNameAutocomplete } from "@/components/site/BizNameAutocomplete";
+import { BizRegNoInput } from "@/components/site/BizRegNoInput";
 import { AnalyzingOverlay } from "./AnalyzingOverlay";
 
 const initial: AnalyzeFormState = { status: "idle" };
@@ -42,18 +43,7 @@ export function AnalyzeForm() {
           }}
         />
 
-        <div className="space-y-1.5">
-          <Label htmlFor="bizRegNo">사업자등록번호</Label>
-          <Input
-            id="bizRegNo"
-            name="bizRegNo"
-            placeholder="예) 123-45-67890 (선택)"
-            inputMode="numeric"
-          />
-          <p className="text-xs text-muted-foreground">
-            입력 시 국세청 진위확인이 자동 수행됩니다.
-          </p>
-        </div>
+        <BizRegNoInput />
 
         <div className="space-y-1.5">
           <Label htmlFor="industry" required>

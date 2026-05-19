@@ -54,15 +54,11 @@ export async function GET(req: Request) {
     };
 
     const suggestions: PlaceSuggestion[] = (data.documents ?? []).map((d) => {
-      const parts = (d.category_name || "")
-        .split(">")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const leaf = parts[parts.length - 1] || "";
+      const industry = pickIndustry(d.category_name, d.place_name);
       return {
         id: d.id,
         placeName: d.place_name,
-        category: leaf,
+        category: industry,
         fullCategory: d.category_name || "",
         address: d.road_address_name || d.address_name,
         jibunAddress: d.address_name,
@@ -78,4 +74,26 @@ export async function GET(req: Request) {
     console.error("places/search error:", e);
     return NextResponse.json({ suggestions: [] }, { status: 200 });
   }
+}
+
+// 카카오 category_name 의 마지막이 매장 브랜드명인 경우가 있어 휴리스틱 적용.
+// 예) "음식점 > 양식 > 돈가스 > 뜨돈" + "뜨돈 금호점" → "돈가스"
+function pickIndustry(categoryName: string, placeName: string): string {
+  const parts = (categoryName || "")
+    .split(">")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return "";
+  const last = parts[parts.length - 1];
+  const placeNorm = (placeName || "").replace(/\s/g, "");
+  const lastNorm = last.replace(/\s/g, "");
+
+  // 마지막이 매장명에 포함되거나(브랜드명) 너무 짧으면 그 이전 깊이 사용
+  if (
+    parts.length >= 2 &&
+    (placeNorm.includes(lastNorm) || lastNorm.length <= 2)
+  ) {
+    return parts[parts.length - 2];
+  }
+  return last;
 }
