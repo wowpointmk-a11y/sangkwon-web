@@ -1,12 +1,17 @@
-// 행정안전부_주민등록 인구 및 세대현황
-// https://www.data.go.kr/data/15006840/openapi.do
+// 행정안전부_법정동별(행정동 통반단위) 성/연령별 주민등록 인구수
+// https://www.data.go.kr/data/15108074/openapi.do
+// End Point: https://apis.data.go.kr/1741000/stdgSexdAgePpltn/selectStdgSexdAgePpltn
 //
-// 실제 운영에서는 행정구역 코드(법정동/행정동) 입력이 필요.
-// 본 모듈은 카카오 reverseGeocode 결과의 bcode(법정동 10자리) 앞 5자리(시군구)로 조회.
+// 응답: Response.head{resultCode, totalCount, ...} / Response.items.item[]
+// 필드:
+//   tong, ban, ctpvNm, stdgNm, dongNm, totNmprCnt
+//   male0AgeNmprCnt ... male100AgeNmprCnt
+//   feml0AgeNmprCnt ... feml100AgeNmprCnt
 
 import { env } from "../env";
 
-const BASE = "http://apis.data.go.kr/1741000/admmSexdAgePop";
+const ENDPOINT =
+  "https://apis.data.go.kr/1741000/stdgSexdAgePpltn/selectStdgSexdAgePpltn";
 
 export interface PopulationByAge {
   ageGroup: string; // "0-9", "10-19", ...
@@ -25,59 +30,140 @@ export interface PopulationSummary {
   dominantAgeGroup: string;
 }
 
-// 시군구 단위 연령·성별 인구 조회
-// bcode 가 정확히 매칭되지 않을 수 있어 결과는 best-effort.
+interface ApiItem {
+  ctpvNm?: string;
+  signguNm?: string;
+  stdgNm?: string;
+  dongNm?: string;
+  tong?: string;
+  ban?: string;
+  totNmprCnt?: string | number;
+  [key: string]: unknown;
+}
+
+interface ApiEnvelope {
+  Response?: {
+    head?: {
+      resultCode?: string;
+      resultMsg?: string;
+      totalCount?: string;
+      pageNo?: string;
+      numOfRows?: string;
+    };
+    items?: { item?: ApiItem[] | ApiItem } | string;
+  };
+}
+
+// "현재 - 3개월" 의 년월. 데이터 발행 지연을 고려.
+// 너무 최근이면 NO_DATA. 너무 과거면 의미 떨어짐.
+function defaultYm(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 3);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// 시군구 단위 (lv=2) 성/연령별 인구 조회.
+// bcode: 법정동 10자리 (앞 5자리가 시군구).
 export async function populationByRegion(opts: {
-  bcode: string; // 법정동 10자리
+  bcode: string;
   year?: number;
 }): Promise<PopulationSummary | null> {
-  const sggCode = opts.bcode.slice(0, 5);
-  const year = opts.year ?? new Date().getFullYear() - 1; // 전년도 데이터가 안정적
+  const ym = opts.year
+    ? `${opts.year}01`
+    : defaultYm();
 
+  // 3개월 시도 → 안 되면 1년 전 같은 달 fallback
+  const candidates: string[] = [ym, fallbackYm(ym), "202501"];
+
+  for (const targetYm of candidates) {
+    const result = await tryCall({
+      stdgCd: opts.bcode,
+      srchFrYm: targetYm,
+      srchToYm: targetYm,
+      lv: "2",
+    });
+    if (result) return result;
+  }
+  return null;
+}
+
+function fallbackYm(ym: string): string {
+  // 한 해 전 같은 달
+  const y = Number(ym.slice(0, 4));
+  const m = ym.slice(4, 6);
+  return `${y - 1}${m}`;
+}
+
+async function tryCall(
+  extra: Record<string, string>,
+): Promise<PopulationSummary | null> {
   const params = new URLSearchParams({
     serviceKey: env.dataGoKrKey(),
     type: "json",
     pageNo: "1",
     numOfRows: "100",
-    stdgCd: sggCode,
-    srchFrYm: `${year}01`,
-    srchToYm: `${year}12`,
+    regSeCd: "1",
+    ...extra,
   });
 
-  const url = `${BASE}?${params.toString()}`;
-  let data: unknown;
+  let data: ApiEnvelope;
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(`${ENDPOINT}?${params.toString()}`, {
+      cache: "no-store",
+    });
     if (!res.ok) return null;
-    data = await res.json();
+    data = (await res.json()) as ApiEnvelope;
   } catch {
     return null;
   }
 
-  // 응답 스키마는 API마다 다름. 안전하게 파싱.
-  // 폴백: 데이터가 없으면 null.
-  const items = extractItems(data);
-  if (!items.length) return null;
+  const head = data.Response?.head;
+  if (!head || head.resultCode !== "0") return null;
 
-  // 연령대 집계
+  const itemsContainer = data.Response?.items;
+  if (!itemsContainer || typeof itemsContainer === "string") return null;
+
+  const raw = itemsContainer.item;
+  const items: ApiItem[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  if (items.length === 0) return null;
+
+  return aggregate(items);
+}
+
+function aggregate(items: ApiItem[]): PopulationSummary | null {
   const buckets: Record<string, { m: number; f: number }> = {};
   let totalM = 0;
   let totalF = 0;
   let regionName = "";
 
   for (const item of items) {
-    regionName =
-      String(item.admmNm ?? item.stdgNm ?? "") || regionName;
-    const age = normalizeAgeGroup(String(item.ageNm ?? item.ageGrp ?? ""));
-    if (!age) continue;
-    const m = Number(item.maleCnt ?? item.malePopltn ?? 0);
-    const f = Number(item.femaleCnt ?? item.femalePopltn ?? 0);
-    buckets[age] = buckets[age] ?? { m: 0, f: 0 };
-    buckets[age].m += m;
-    buckets[age].f += f;
-    totalM += m;
-    totalF += f;
+    // 지역명 잡기 (가장 구체적인 것 우선)
+    const parts = [
+      String(item.ctpvNm ?? "").trim(),
+      String(item.signguNm ?? "").trim(),
+      String(item.dongNm ?? item.stdgNm ?? "").trim(),
+    ].filter(Boolean);
+    if (parts.length && !regionName) regionName = parts.join(" ");
+
+    // male{X}AgeNmprCnt, feml{X}AgeNmprCnt 패턴 매칭
+    for (const [k, v] of Object.entries(item)) {
+      const m = String(k).match(/^(male|feml)(\d+)AgeNmprCnt$/);
+      if (!m) continue;
+      const gender = m[1] === "male" ? "m" : "f";
+      const age = Number(m[2]);
+      const cnt = Number(v ?? 0) || 0;
+      // 10년 단위 버킷 (0,10,20,...,70,80+)
+      const decade = age >= 80 ? 80 : Math.floor(age / 10) * 10;
+      const groupKey = decade === 80 ? "80+" : `${decade}-${decade + 9}`;
+      buckets[groupKey] = buckets[groupKey] ?? { m: 0, f: 0 };
+      buckets[groupKey][gender] += cnt;
+      if (gender === "m") totalM += cnt;
+      else totalF += cnt;
+    }
   }
+
+  const total = totalM + totalF;
+  if (total === 0) return null;
 
   const byAge: PopulationByAge[] = Object.entries(buckets)
     .map(([ageGroup, v]) => ({
@@ -88,13 +174,10 @@ export async function populationByRegion(opts: {
     }))
     .sort((a, b) => ageOrder(a.ageGroup) - ageOrder(b.ageGroup));
 
-  const total = totalM + totalF;
-  if (total === 0) return null;
-
   const dominant = [...byAge].sort((a, b) => b.total - a.total)[0];
 
   return {
-    regionName: regionName || sggCode,
+    regionName: regionName || "-",
     totalPopulation: total,
     household: null,
     byAge,
@@ -102,34 +185,6 @@ export async function populationByRegion(opts: {
     femalePct: (totalF / total) * 100,
     dominantAgeGroup: dominant?.ageGroup ?? "-",
   };
-}
-
-function extractItems(data: unknown): Array<Record<string, string | number>> {
-  if (!data || typeof data !== "object") return [];
-  const root = data as Record<string, unknown>;
-  // 케이스 1: { response: { body: { items: { item: [...] } } } }
-  const r1 = (root.response as { body?: { items?: { item?: unknown[] } } })
-    ?.body?.items?.item;
-  if (Array.isArray(r1)) return r1 as Array<Record<string, string | number>>;
-  // 케이스 2: { response: { body: { items: [...] } } }
-  const r2 = (root.response as { body?: { items?: unknown[] } })?.body?.items;
-  if (Array.isArray(r2)) return r2 as Array<Record<string, string | number>>;
-  // 케이스 3: 단순 배열
-  const r3 = root.items;
-  if (Array.isArray(r3)) return r3 as Array<Record<string, string | number>>;
-  return [];
-}
-
-function normalizeAgeGroup(raw: string): string | null {
-  if (!raw) return null;
-  const s = String(raw).replace(/\s/g, "");
-  // "0~9세", "10대", "10-19", "10~19세" 등
-  const m = s.match(/(\d+)\s*[~\-에서]?\s*(\d+)?/);
-  if (!m) return null;
-  const lo = Number(m[1]);
-  if (lo >= 80) return "80+";
-  const decade = Math.floor(lo / 10) * 10;
-  return `${decade}-${decade + 9}`;
 }
 
 function ageOrder(group: string) {
