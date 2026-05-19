@@ -78,13 +78,27 @@ const FALLBACK: SampleData = {
     "30대 직장인 비중이 높고, 반경 내 카페가 평균보다 18% 많습니다. 점심 직후 시간대를 노린 차별화 메뉴와…",
 };
 
+function maskInsideText(
+  text: string | null,
+  original: string,
+  masked: string,
+): string | null {
+  if (!text || !original) return text;
+  const escaped = original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(escaped, "g"), masked);
+}
+
 export default async function Home() {
   const sampleRaw = (await fetchLatestSample()) ?? FALLBACK;
   const isLive = sampleRaw !== FALLBACK;
+  const maskedName = isLive ? maskBizName(sampleRaw.bizName) : sampleRaw.bizName;
   const sample = {
     ...sampleRaw,
-    bizName: isLive ? maskBizName(sampleRaw.bizName) : sampleRaw.bizName,
+    bizName: maskedName,
     address: isLive ? maskAddress(sampleRaw.address) : sampleRaw.address,
+    insight: isLive
+      ? maskInsideText(sampleRaw.insight, sampleRaw.bizName, maskedName)
+      : sampleRaw.insight,
   };
   return (
     <>

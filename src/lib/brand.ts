@@ -14,13 +14,13 @@ export const brand = {
 
   company: {
     name: "와우포인트",
-    address: "인천시 부평구 아트센터로44번길 3",
+    address: "인천광역시 부평구 아트센터로44번길 3, 2층 202호 (십정동)",
     phone: "010-3232-6156",
     email: "wowpointmk@gmail.com",
     site: "https://wowpoint-mk.web.app",
-    // TODO: 실제 사업자번호·대표자명 받으면 채울 것
-    bizRegNo: "(사업자번호 추후 등록)",
-    representative: "(대표자명 추후 등록)",
-    privacyOfficer: "(개인정보 보호책임자 추후 지정)",
+    bizRegNo: "839-09-02919",
+    representative: "박철홍",
+    privacyOfficer: "박철홍",
+    bizType: "전문, 과학 및 기술서비스업 / 광고 대행업",
   },
 } as const;
