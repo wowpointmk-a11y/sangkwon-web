@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/supabase";
 import { Card, CardTitle, CardDescription, Stat } from "@/components/ui/card";
-import { formatNumber, formatPercent } from "@/lib/utils";
+import { formatNumber, formatPercent, formatRadius } from "@/lib/utils";
 import { LeadForm } from "./LeadForm";
 import { IndustryChart, AgeChart } from "./Charts";
 import { SiteHeader } from "@/components/site/Header";
@@ -113,7 +113,7 @@ export default async function ReportPage({
           <h2 className="text-lg font-semibold mb-4">주요 지표</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Stat
-              label={`반경 ${summary.radiusM ?? 500}m 내 상가`}
+              label={`반경 ${formatRadius(summary.radiusM ?? 2000)} 내 상가`}
               value={formatNumber(summary.totalStores)}
               hint="공공 상가 DB 기준"
             />

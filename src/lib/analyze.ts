@@ -56,7 +56,7 @@ export interface AnalyzeResult {
 }
 
 export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
-  const radiusM = input.radiusM ?? 500;
+  const radiusM = input.radiusM ?? 2000;
 
   const geo = await geocodeAddress(input.address);
   if (!geo) {

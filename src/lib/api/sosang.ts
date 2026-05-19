@@ -46,7 +46,7 @@ interface SosangEnvelope {
 export async function storesInRadius(opts: {
   lng: number;
   lat: number;
-  radius: number; // meters, 최대 1000
+  radius: number; // meters (API 공식 한도 1000, 실측 일부는 더 큰 값 허용)
   page?: number;
   numOfRows?: number;
   industryCode?: string; // 업종 코드 필터 (선택)
@@ -56,7 +56,7 @@ export async function storesInRadius(opts: {
     type: "json",
     cx: String(opts.lng),
     cy: String(opts.lat),
-    radius: String(Math.min(opts.radius, 1000)),
+    radius: String(opts.radius),
     pageNo: String(opts.page ?? 1),
     numOfRows: String(opts.numOfRows ?? 100),
   });

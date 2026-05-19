@@ -136,7 +136,7 @@ export default function Home() {
                   </div>
                   <div className="mt-5 grid grid-cols-2 gap-2">
                     {[
-                      { l: "반경 500m 내 상가", v: "812" },
+                      { l: "반경 2km 내 상가", v: "3,127" },
                       { l: "동일 업종 경쟁", v: "34" },
                       { l: "행정구역 인구", v: "182,431" },
                       { l: "주력 연령대", v: "30-39" },
