@@ -26,19 +26,21 @@ export interface Store {
   lat?: string;
 }
 
-interface SosangResponse {
-  body?: {
-    items?: Store[];
-    totalCount?: number;
-    pageNo?: number;
-    numOfRows?: number;
-  };
+interface SosangBody {
+  items?: Store[];
+  totalCount?: number;
+  pageNo?: number;
+  numOfRows?: number;
 }
 
 interface SosangEnvelope {
+  // 신규 응답 구조 (최상위 header/body)
+  header?: { resultCode?: string; resultMsg?: string };
+  body?: SosangBody;
+  // 구 응답 구조 (response 래핑) — 호환용
   response?: {
     header?: { resultCode?: string; resultMsg?: string };
-    body?: SosangResponse["body"];
+    body?: SosangBody;
   };
 }
 
@@ -68,13 +70,14 @@ export async function storesInRadius(opts: {
     throw new Error(`소상공인 API 실패: ${res.status}`);
   }
   const data = (await res.json()) as SosangEnvelope;
-  const code = data.response?.header?.resultCode;
+  const header = data.header ?? data.response?.header;
+  const body = data.body ?? data.response?.body;
+  const code = header?.resultCode;
   if (code && code !== "00") {
     throw new Error(
-      `소상공인 API 오류 [${code}]: ${data.response?.header?.resultMsg}`,
+      `소상공인 API 오류 [${code}]: ${header?.resultMsg}`,
     );
   }
-  const body = data.response?.body;
   return {
     items: body?.items ?? [],
     totalCount: body?.totalCount ?? 0,

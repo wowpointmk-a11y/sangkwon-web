@@ -7,6 +7,7 @@ import { runAnalyze, type AnalyzeFormState } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { AddressSearch } from "@/components/site/AddressSearch";
+import { AnalyzingOverlay } from "./AnalyzingOverlay";
 
 const initial: AnalyzeFormState = { status: "idle" };
 
@@ -17,14 +18,17 @@ export function AnalyzeForm() {
 
   useEffect(() => {
     if (state.status === "success") {
+      toast.success("분석이 완료되었습니다. 리포트로 이동합니다.");
       router.push(`/report/${state.result.analysisId}`);
     } else if (state.status === "error") {
-      toast.error(state.message);
+      toast.error(`분석에 실패했습니다 — ${state.message}`);
     }
   }, [state, router]);
 
   return (
-    <form action={action} className="space-y-5">
+    <>
+      <AnalyzingOverlay open={pending} />
+      <form action={action} className="space-y-5">
       <div className="space-y-1.5">
         <Label htmlFor="bizName" required>
           상호명
@@ -96,6 +100,7 @@ export function AnalyzeForm() {
       <p className="text-xs text-muted-foreground text-center">
         분석은 공공 API 응답 속도에 따라 최대 15초 소요될 수 있습니다.
       </p>
-    </form>
+      </form>
+    </>
   );
 }
