@@ -1,17 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { toast } from "sonner";
 import { runAnalyze, type AnalyzeFormState } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { AddressSearch } from "@/components/site/AddressSearch";
 
 const initial: AnalyzeFormState = { status: "idle" };
 
 export function AnalyzeForm() {
   const [state, action, pending] = useActionState(runAnalyze, initial);
+  const [address, setAddress] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function AnalyzeForm() {
         <Input
           id="bizName"
           name="bizName"
-          placeholder="예) 찬스카페 강남점"
+          placeholder="예) 와우포인트, 찬스카페 강남점"
           required
         />
       </div>
@@ -77,14 +78,14 @@ export function AnalyzeForm() {
         <Label htmlFor="address" required>
           매장 주소
         </Label>
-        <Input
-          id="address"
-          name="address"
-          placeholder="예) 서울 강남구 테헤란로 152"
+        <AddressSearch
+          value={address}
+          onChange={setAddress}
           required
+          placeholder="클릭해서 검색 (도로명 / 지번 모두 가능)"
         />
         <p className="text-xs text-muted-foreground">
-          도로명/지번 모두 가능. 가능한 구체적으로 입력해주세요.
+          입력칸을 클릭하면 우편번호 검색창이 열립니다.
         </p>
       </div>
 
