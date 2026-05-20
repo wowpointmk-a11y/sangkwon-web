@@ -80,7 +80,7 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
 
   const [bizStatusRes, storesRes, regionRes] = await Promise.allSettled([
     input.bizRegNo ? checkBusinessStatus(input.bizRegNo) : Promise.resolve(null),
-    storesInRadius({ lng: geo.lng, lat: geo.lat, radius: radiusM, numOfRows: 500 }),
+    storesInRadius({ lng: geo.lng, lat: geo.lat, radius: radiusM, numOfRows: 1000 }),
     reverseGeocode(geo.lng, geo.lat),
   ]);
 
