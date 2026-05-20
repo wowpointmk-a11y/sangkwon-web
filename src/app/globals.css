@@ -53,4 +53,8 @@ body {
     "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, Roboto,
     "Noto Sans KR", "Segoe UI", "Malgun Gothic", sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* 한국어 어절(단어) 단위 줄바꿈. 영문 단어 중간에서 끊기지 않게. */
+  word-break: keep-all;
+  line-break: strict;
+  overflow-wrap: break-word;
 }

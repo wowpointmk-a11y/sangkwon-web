@@ -117,8 +117,12 @@ export default async function Home() {
             <span className="italic text-muted-foreground">Wow.</span>
           </h1>
           <p className="mt-6 mx-auto max-w-2xl text-center text-base sm:text-lg text-muted-foreground leading-relaxed">
-            상호·업종·주소만 입력하면{" "}
-            <strong className="text-foreground">상권 데이터 + 타겟 + 후킹 멘트 + 네이버 키워드 5개 + 플랫폼 추천</strong>
+            상호·업종·주소만 입력하면
+            <br className="hidden sm:block" />{" "}
+            <strong className="text-foreground">
+              상권 데이터 · 타겟 · 후킹 멘트 · 네이버 키워드 5개 · 플랫폼 추천
+            </strong>
+            <br className="hidden sm:block" />
             까지 한 번에. 무료로.
           </p>
           <div className="mt-10 flex items-center justify-center gap-3">
