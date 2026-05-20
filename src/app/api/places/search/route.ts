@@ -76,8 +76,10 @@ export async function GET(req: Request) {
   }
 }
 
-// 카카오 category_name 의 마지막이 매장 브랜드명인 경우가 있어 휴리스틱 적용.
-// 예) "음식점 > 양식 > 돈가스 > 뜨돈" + "뜨돈 금호점" → "돈가스"
+// 카카오 category_name 에서 매장 브랜드명을 걸러내고 매칭 풀을 넓히기 위해
+// 마지막 2계층을 합쳐서 반환. 예) "음식점 > 양식 > 돈가스 > 뜨돈" + "뜨돈 금호점"
+//   → "양식 돈가스" (브랜드명 '뜨돈' 제외, 상위 2계층 합침)
+// 이렇게 하면 소상공인 분류 (양식/돈가스/경양식 등) 와 부분 매칭이 잘 됨.
 function pickIndustry(categoryName: string, placeName: string): string {
   const parts = (categoryName || "")
     .split(">")
@@ -88,12 +90,16 @@ function pickIndustry(categoryName: string, placeName: string): string {
   const placeNorm = (placeName || "").replace(/\s/g, "");
   const lastNorm = last.replace(/\s/g, "");
 
-  // 마지막이 매장명에 포함되거나(브랜드명) 너무 짧으면 그 이전 깊이 사용
-  if (
+  // 마지막이 매장 브랜드명이면 → parts[-3]+parts[-2]
+  const brandIsLast =
     parts.length >= 2 &&
-    (placeNorm.includes(lastNorm) || lastNorm.length <= 2)
-  ) {
+    (placeNorm.includes(lastNorm) || lastNorm.length <= 2);
+
+  if (brandIsLast) {
+    if (parts.length >= 3) return `${parts[parts.length - 3]} ${parts[parts.length - 2]}`;
     return parts[parts.length - 2];
   }
+  // 일반: parts[-2] + parts[-1]
+  if (parts.length >= 2) return `${parts[parts.length - 2]} ${last}`;
   return last;
 }

@@ -96,14 +96,37 @@ export function tallyByIndustry(stores: Store[]) {
     .sort((a, b) => b.count - a.count);
 }
 
-// 동일 업종(소분류) 경쟁업체 수
+// 동일 업종 경쟁업체 수 — 다층 분류 + 토큰 매칭으로 매칭률 향상.
+// 사용자 입력 (카카오 카테고리 일부) 과 소상공인 분류 (대/중/소 + KSIC) 체계가
+// 다르기 때문에 양쪽 모두 토큰화한 후 부분 매칭으로 비교.
 export function countCompetitors(stores: Store[], myIndustryName: string) {
   if (!myIndustryName) return 0;
-  const needle = myIndustryName.replace(/\s/g, "").toLowerCase();
+  const myTokens = tokenize(myIndustryName);
+  if (myTokens.length === 0) return 0;
+
   return stores.filter((s) => {
-    const cand = (s.indsSclsNm || s.indsMclsNm || "")
-      .replace(/\s/g, "")
-      .toLowerCase();
-    return cand && (cand.includes(needle) || needle.includes(cand));
+    const candidateText = [
+      s.indsLclsNm,
+      s.indsMclsNm,
+      s.indsSclsNm,
+      s.ksicNm,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const candTokens = tokenize(candidateText);
+    // 양방향 부분 매칭: my "돈가스" ⊃ cand "가스" 또는 my "한식" ⊂ cand "한식음식점"
+    return myTokens.some((mt) =>
+      candTokens.some((ct) => ct.includes(mt) || mt.includes(ct)),
+    );
   }).length;
+}
+
+function tokenize(text: string | undefined): string[] {
+  if (!text) return [];
+  return text
+    .toLowerCase()
+    .replace(/[()/,·.]/g, " ")
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 2);
 }
