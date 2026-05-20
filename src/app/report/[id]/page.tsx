@@ -255,7 +255,7 @@ export default async function ReportPage({
               hint={`업종: ${row.industry}`}
             />
             <Stat
-              label="행정구역 인구"
+              label="반경 2km 인구"
               value={pop ? formatNumber(pop.totalPopulation) : "-"}
               hint={pop?.regionName}
             />
@@ -285,7 +285,7 @@ export default async function ReportPage({
           <Card>
             <CardTitle>연령대별 인구</CardTitle>
             <CardDescription>
-              {pop?.regionName ?? "행정구역"} 기준 주민등록 인구
+              반경 2km · {pop?.regionName ?? "권역"} 주민등록 인구
             </CardDescription>
             <div className="mt-4 h-72">
               {pop ? (

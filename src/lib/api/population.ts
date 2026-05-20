@@ -84,7 +84,8 @@ export async function populationByRegion(opts: {
 }
 
 // 반경 N미터 안에 들어가는 행정동들의 인구 합산.
-// 8방향 + 중심 = 9개 좌표 샘플링 → 각 좌표의 법정동 코드 unique 추출 → 합산.
+// 8방향 + 중심 = 9개 좌표 샘플링 → 각 좌표의 법정동 이름 unique 추출
+// → 시군구 한 번 호출(lv=3은 시군구 전체 동을 반환) → 응답에서 unique 동만 골라 합산.
 export async function populationByRadius(opts: {
   lng: number;
   lat: number;
@@ -94,9 +95,8 @@ export async function populationByRadius(opts: {
     lat: number,
   ) => Promise<{ beob?: { code?: string; name?: string } | null } | null>;
 }): Promise<PopulationSummary | null> {
-  // 9개 샘플 점. 대각선 고려해서 반경의 0.7배 거리 사용.
   const r = opts.radiusM * 0.7;
-  const dLatPer100m = 1 / 111000; // 1m → 위도 도(degree)
+  const dLatPer100m = 1 / 111000;
   const dLngPer100m = 1 / (111000 * Math.cos((opts.lat * Math.PI) / 180));
 
   const offsets: Array<[number, number]> = [
@@ -116,39 +116,128 @@ export async function populationByRadius(opts: {
     lat: opts.lat + dy * r * dLatPer100m,
   }));
 
-  // 각 좌표 → 법정동 코드
-  const bcodes = new Set<string>();
-  const regionNames = new Map<string, string>();
+  // 9개 점 → 카카오 reverseGeocode → 법정동 이름(stdgNm) set + 시군구 코드 1개 확보
+  const dongNames = new Set<string>();
+  let sggCode = "";
   await Promise.all(
     points.map(async (p) => {
       try {
         const region = await opts.reverseGeocode(p.lng, p.lat);
         const code = region?.beob?.code;
-        if (code) {
-          bcodes.add(code);
-          if (region?.beob?.name) regionNames.set(code, region.beob.name);
-        }
+        const name = region?.beob?.name;
+        if (name) dongNames.add(name);
+        if (code && !sggCode) sggCode = code; // 첫 유효 코드로 시군구 한 번만 호출
       } catch {
         // 무시
       }
     }),
   );
 
-  if (bcodes.size === 0) return null;
+  if (!sggCode || dongNames.size === 0) return null;
 
-  // 각 동 인구 → 합산
-  const summaries: PopulationSummary[] = [];
-  await Promise.all(
-    Array.from(bcodes).map(async (code) => {
-      const s = await populationByRegion({ bcode: code, lv: "3" }).catch(
-        () => null,
-      );
-      if (s) summaries.push(s);
-    }),
-  );
+  // 시군구 단위로 1번 호출하면 시군구 전체 동(보통 5~30개) 반환
+  // → 우리가 모은 unique 동 이름과 매칭되는 것만 합산.
+  const items = await fetchRawItems(sggCode);
+  if (!items.length) return null;
 
-  if (summaries.length === 0) return null;
-  return mergeSummaries(summaries, Array.from(regionNames.values()));
+  const matched = items.filter((it) => {
+    const nm = String(it.stdgNm ?? "").trim();
+    return nm && dongNames.has(nm);
+  });
+  if (matched.length === 0) return null;
+
+  return aggregateRaw(matched, Array.from(dongNames));
+}
+
+// 시군구 1개 호출 → raw items 배열 반환 (병합/필터 외부에서)
+async function fetchRawItems(stdgCd: string): Promise<ApiItem[]> {
+  const ym = defaultYm();
+  const candidates: string[] = [ym, fallbackYm(ym), "202501"];
+
+  for (const targetYm of candidates) {
+    const params = new URLSearchParams({
+      serviceKey: env.dataGoKrKey(),
+      type: "json",
+      pageNo: "1",
+      numOfRows: "200",
+      regSeCd: "1",
+      stdgCd,
+      srchFrYm: targetYm,
+      srchToYm: targetYm,
+      lv: "3",
+    });
+
+    try {
+      const res = await fetch(`${ENDPOINT}?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+      const data = (await res.json()) as ApiEnvelope;
+      if (data.Response?.head?.resultCode !== "0") continue;
+      const itemsContainer = data.Response?.items;
+      if (!itemsContainer || typeof itemsContainer === "string") continue;
+      const raw = itemsContainer.item;
+      const arr: ApiItem[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      if (arr.length) return arr;
+    } catch {
+      // 다음 fallback
+    }
+  }
+  return [];
+}
+
+// 이미 필터된 동들의 raw item 합산
+function aggregateRaw(
+  items: ApiItem[],
+  pickedNames: string[],
+): PopulationSummary | null {
+  const buckets: Record<string, { m: number; f: number }> = {};
+  let totalM = 0;
+  let totalF = 0;
+
+  for (const item of items) {
+    for (const [k, v] of Object.entries(item)) {
+      const m = String(k).match(/^(male|feml)(\d+)AgeNmprCnt$/);
+      if (!m) continue;
+      const gender = m[1] === "male" ? "m" : "f";
+      const age = Number(m[2]);
+      const cnt = Number(v ?? 0) || 0;
+      const decade = age >= 80 ? 80 : Math.floor(age / 10) * 10;
+      const groupKey = decade === 80 ? "80+" : `${decade}-${decade + 9}`;
+      buckets[groupKey] = buckets[groupKey] ?? { m: 0, f: 0 };
+      buckets[groupKey][gender] += cnt;
+      if (gender === "m") totalM += cnt;
+      else totalF += cnt;
+    }
+  }
+
+  const total = totalM + totalF;
+  if (total === 0) return null;
+
+  const byAge: PopulationByAge[] = Object.entries(buckets)
+    .map(([ageGroup, v]) => ({
+      ageGroup,
+      male: v.m,
+      female: v.f,
+      total: v.m + v.f,
+    }))
+    .sort((a, b) => ageOrder(a.ageGroup) - ageOrder(b.ageGroup));
+
+  const dominant = [...byAge].sort((a, b) => b.total - a.total)[0];
+  const region =
+    pickedNames.length === 1
+      ? pickedNames[0]
+      : `${pickedNames.slice(0, 2).join(", ")} 등 ${pickedNames.length}개 동`;
+
+  return {
+    regionName: region || "반경 2km 권역",
+    totalPopulation: total,
+    household: null,
+    byAge,
+    malePct: total ? (totalM / total) * 100 : 0,
+    femalePct: total ? (totalF / total) * 100 : 0,
+    dominantAgeGroup: dominant?.ageGroup ?? "-",
+  };
 }
 
 function mergeSummaries(

@@ -248,7 +248,7 @@ export default async function Home() {
                         v: formatNumber(sample.competitorCount),
                       },
                       {
-                        l: "행정구역 인구",
+                        l: "반경 2km 인구",
                         v:
                           sample.population !== null
                             ? formatNumber(sample.population)
