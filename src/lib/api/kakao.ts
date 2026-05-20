@@ -54,9 +54,23 @@ export async function reverseGeocode(lng: number, lat: number) {
   if (!res.ok) return null;
   const data = await res.json();
   // documents[0] = 법정동, [1] = 행정동
-  const beob = data.documents?.find((d: { region_type: string }) => d.region_type === "B");
-  const haeng = data.documents?.find(
-    (d: { region_type: string }) => d.region_type === "H",
-  );
+  type KakaoRegionDoc = {
+    region_type: string;
+    code: string;
+    region_3depth_name: string;
+    region_2depth_name: string;
+    region_1depth_name: string;
+  };
+  const docs: KakaoRegionDoc[] = data.documents ?? [];
+  const b = docs.find((d) => d.region_type === "B");
+  const h = docs.find((d) => d.region_type === "H");
+
+  // populationByRadius 등에서 사용하기 쉽게 name 필드 노출
+  const beob = b
+    ? { ...b, name: b.region_3depth_name, code: b.code }
+    : null;
+  const haeng = h
+    ? { ...h, name: h.region_3depth_name, code: h.code }
+    : null;
   return { beob, haeng };
 }
