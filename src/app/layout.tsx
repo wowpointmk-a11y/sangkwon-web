@@ -17,6 +17,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: `${brand.serviceTitle} — ${brand.serviceTagline}`,
   description: `${brand.taglineKo} 사업자 정보만 입력하면 인구·업종·경쟁 상권 데이터를 자동 분석합니다.`,
+  verification: {
+    other: {
+      "naver-site-verification": "0729f3e6b1d78867265b984fc3f5bdaaf5b2b8f4",
+    },
+  },
 };
 
 export default function RootLayout({
