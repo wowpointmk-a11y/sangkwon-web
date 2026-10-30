@@ -6,6 +6,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: `상권 분석 시작 — ${brand.serviceTitle}`,
+  alternates: { canonical: "/analyze" },
 };
 
 export default function AnalyzePage() {

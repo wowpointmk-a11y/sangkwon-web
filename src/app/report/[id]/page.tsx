@@ -9,6 +9,11 @@ import { SiteHeader } from "@/components/site/Header";
 import { SiteFooter } from "@/components/site/Footer";
 import { brand } from "@/lib/brand";
 
+// 사장님별 분석 결과라 검색 노출 금지. 링크 공유 미리보기(OG)는 그대로 둔다.
+export const metadata = {
+  robots: { index: false, follow: false },
+};
+
 type Params = { id: string };
 
 export default async function ReportPage({

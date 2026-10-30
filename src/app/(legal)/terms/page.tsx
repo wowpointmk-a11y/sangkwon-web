@@ -2,6 +2,7 @@ import { brand } from "@/lib/brand";
 
 export const metadata = {
   title: `이용약관 — ${brand.serviceTitle}`,
+  alternates: { canonical: "/terms" },
 };
 
 const REVISION_DATE = "2026-05-19";

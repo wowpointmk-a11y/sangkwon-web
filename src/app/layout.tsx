@@ -14,9 +14,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const title = `${brand.serviceTitle} — ${brand.serviceTagline}`;
+const description = `${brand.taglineKo} 사업자 정보만 입력하면 인구·업종·경쟁 상권 데이터를 자동 분석합니다.`;
+
 export const metadata: Metadata = {
-  title: `${brand.serviceTitle} — ${brand.serviceTagline}`,
-  description: `${brand.taglineKo} 사업자 정보만 입력하면 인구·업종·경쟁 상권 데이터를 자동 분석합니다.`,
+  metadataBase: new URL(brand.siteUrl),
+  title,
+  description,
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: brand.serviceTitle,
+    title,
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
   verification: {
     other: {
       "naver-site-verification": "0729f3e6b1d78867265b984fc3f5bdaaf5b2b8f4",

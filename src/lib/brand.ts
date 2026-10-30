@@ -12,6 +12,9 @@ export const brand = {
   serviceTitle: "상권분석 by 와우포인트",
   serviceTagline: "내 가게 주변, 1분 만에 데이터로 본다",
 
+  // 대표 도메인. www 는 Vercel 에서 이쪽으로 308 리다이렉트.
+  siteUrl: "https://ai외식업마케팅.com",
+
   company: {
     name: "와우포인트",
     address: "인천광역시 부평구 아트센터로44번길 3, 2층 202호 (십정동)",

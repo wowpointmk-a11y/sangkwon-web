@@ -14,6 +14,10 @@ import {
 // 5분마다 랜딩 페이지를 ISR 재생성 (최신 분석 반영)
 export const revalidate = 300;
 
+export const metadata = {
+  alternates: { canonical: "/" },
+};
+
 type SampleData = {
   bizName: string;
   industry: string;

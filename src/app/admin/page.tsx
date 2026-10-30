@@ -6,6 +6,10 @@ import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  robots: { index: false, follow: false },
+};
+
 async function loginAction(formData: FormData) {
   "use server";
   const pw = String(formData.get("password") || "");

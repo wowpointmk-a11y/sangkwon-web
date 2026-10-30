@@ -2,6 +2,7 @@ import { brand } from "@/lib/brand";
 
 export const metadata = {
   title: `개인정보 처리방침 — ${brand.serviceTitle}`,
+  alternates: { canonical: "/privacy" },
 };
 
 const REVISION_DATE = "2026-05-19";
